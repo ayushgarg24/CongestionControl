@@ -53,9 +53,9 @@ with open(filename, 'r') as file:
                 printInformation([seq_num], seq_num, ackNum)
                 seq_num += 1
                 
-            except socket.timeout:
+            except:
                 client_socket.sendto(packet.encode(),(IP_ADDRESS, RECEIVING_PORT))
-
+client_socket.close()
 delayTimes = []
 throughputs = []
 for i in range(len(transmitTimes)):
