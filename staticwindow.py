@@ -68,8 +68,8 @@ while(True):
         if(len(data) == 0): break # if were done reading data then break out of the loop
         data_str = data.decode() # convert to string so we can add header
         #print("data size:", len(data))
-        if(len(data) < 300): 
-            print("data:",data)
+        #if(len(data) < 300): 
+            #print("data:",data)
             #break
         delim = str(next_seq_num) + '|'
         data_str = delim + data_str  
@@ -89,6 +89,7 @@ while(True):
         ack_num = int(ack_num)
         #print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
+            print("Got a dup")
             printInfo(base, ack_num + 1, ack_num)
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
         else: #We know its not a duplicate ack, so save the end time
@@ -115,10 +116,12 @@ while(ack_num < next_seq_num - 1):
         ack_num,addr = sender_socket.recvfrom(4)  
         ack_num = int(ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
+            printInfo(base, ack_num + 1, ack_num)
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
         else: #We know its not a duplicate ack, so save the end time
             #print("ack num:",ack_num)
             end_time = time.time()
+            printInfo(base, next_seq_num-1, ack_num)
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
