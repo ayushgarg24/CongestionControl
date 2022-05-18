@@ -40,7 +40,10 @@ socket.setdefaulttimeout(5)
 # Instatiating a UDP Socket
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def printInfo(currentWin, seqSent, ackNum):
+def printInfo(base, seqSent, ackNum):
+    currentWin = [base]
+    for q in range(1,5):
+        currentWin.append(base+q)
     print()
     print("Current Window:{}".format(currentWin))
     print("Sequence Number of Packet Sent:{}".format(seqSent))
@@ -71,7 +74,8 @@ while(True):
         delim = str(next_seq_num) + '|'
         data_str = delim + data_str  
         data_packets.append(data_str) #store packet after we add the header
-        print("sending packet:", next_seq_num)
+        #print("sending packet:", next_seq_num)
+        printInfo(base, next_seq_num, ack_num)
         start_time = time.time() #start time here
         sender_socket.sendto(data_str.encode(), (IP_ADDRESS, PORT))
         start = [start_time]
@@ -85,10 +89,12 @@ while(True):
         ack_num = int(ack_num)
         #print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
+            printInfo(base, ack_num + 1, ack_num)
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
         else: #We know its not a duplicate ack, so save the end time
             #print("ack num:",ack_num)
             end_time = time.time()
+            printInfo(base, next_seq_num-1, ack_num)
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
