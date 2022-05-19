@@ -22,7 +22,7 @@ x = 0
 file_name = "message.txt"
 packet_num = 0
 prev_ack = -1
-ack_num = -1
+ack_num = 0
 curr_ack = -1
 base = 1
 next_seq_num = 1
@@ -89,20 +89,26 @@ while(True):
         ack_num = int(ack_num)
         #print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
-            print("Got a dup")
             printInfo(base, ack_num + 1, ack_num)
+            print("Thats a dupe^")
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+        elif prev_ack > ack_num:
+            print("got a dummy")
+            ack_num = prev_ack
+            continue
         else: #We know its not a duplicate ack, so save the end time
             #print("ack num:",ack_num)
             end_time = time.time()
             printInfo(base, next_seq_num-1, ack_num)
+            print("Thats a normal ack^")
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
 
         #When we get an acknowledgement, we know all packets up to that number have been acknowledged
         #so we can make the base that acknowledgement
-        base = int(ack_num)
+        if(ack_num != 0):
+            base = int(ack_num)
         continue
     except socket.timeout:
         print("had a timeout")
@@ -117,11 +123,17 @@ while(ack_num < next_seq_num - 1):
         ack_num = int(ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
             printInfo(base, ack_num + 1, ack_num)
+            print("Thats a dupe^")
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+        elif prev_ack > ack_num:
+            print("got a dummy")
+            ack_num = prev_ack
+            continue
         else: #We know its not a duplicate ack, so save the end time
             #print("ack num:",ack_num)
             end_time = time.time()
             printInfo(base, next_seq_num-1, ack_num)
+            print("Thats a normal ack^")
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
