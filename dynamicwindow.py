@@ -13,10 +13,15 @@ IP_ADDRESS = ""
 PORT = int(input("Enter the Port number you want your sender to run: "))
 # Size of the buffer, defining the maximum data that can be buffered for transmission at a time
 PACKET_SIZE = 1000
-# Number of Packets in Window
-window_size = 5
+#SSThresh
+SS_THRESH = 16
+# Number of Packets in Window, initalized to 1 for dynamic
+window_size = 1
 #Acknowledged Packets
 ack_sequences = [0]
+#target ack number is top of the window
+target_ack = 0
+first_run = True
 data_packets = ["first dummy entry"]
 x = 0
 file_name = "message.txt"
@@ -106,6 +111,18 @@ while(True):
             #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
             # slow start or congestion control with some kind of if else based on the current window size.
             # slow start: window_size = window_size * 2, congestion control: window_size = window_size + 1
+            #Slow Start: Increase window Size by 1 for every ack we receive
+            if(window_size < SS_THRESH):
+                window_size += 1
+            else: 
+                if(first_run):
+                    first_run = False
+                    target_ack = base + window_size
+                    print("first run target ack:", target_ack)
+                if(ack_num == target_ack):
+                    window_size += 1
+                    target_ack = base + window_size
+                    print("We are increasing window size, target ack is:", target_ack, "window size is:",window_size)
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
@@ -113,7 +130,8 @@ while(True):
         #When we get an acknowledgement, we know all packets up to that number have been acknowledged
         #so we can make the base that acknowledgement
         if(ack_num != 0):
-            base = int(ack_num)
+            base = int(ack_num) + 1
+        #printInfo(base, next_seq_num-1, ack_num)
         continue
     except socket.timeout: #Here we got a timeout, so set window size to 1, do we need to reset base here?
         print("had a timeout")
@@ -127,29 +145,50 @@ while(ack_num < next_seq_num - 1):
         prev_ack = ack_num 
         ack_num,addr = sender_socket.recvfrom(4)  
         ack_num = int(ack_num)
-        if(ack_num == prev_ack): #Check for same ack number back to back
+        #print("ack num:",ack_num)
+        if(ack_num == prev_ack): #Check for same ack number back to back, if statement is true we got a dup and need to resize window
             printInfo(base, ack_num + 1, ack_num)
             print("Thats a dupe^")
+            #resize window:
+            window_size = 1
             sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
-        elif prev_ack > ack_num:
+        elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
             print("got a dummy")
             ack_num = prev_ack
             continue
-        else: #We know its not a duplicate ack, so save the end time
+        else: #We know its not a duplicate ack, so save the end time and increase window size here
             #print("ack num:",ack_num)
             end_time = time.time()
             printInfo(base, next_seq_num-1, ack_num)
             print("Thats a normal ack^")
+            #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
+            # slow start or congestion control with some kind of if else based on the current window size.
+            # slow start: window_size = window_size * 2, congestion control: window_size = window_size + 1
+            #Slow Start: Increase window Size by 1 for every ack we receive
+            if(window_size < SS_THRESH):
+                window_size += 1
+            else: 
+                if(first_run):
+                    first_run = False
+                    target_ack = base + window_size
+                    print("first run target ack:", target_ack)
+                if(ack_num == target_ack):
+                    window_size += 1
+                    target_ack = base + window_size
+                    print("We are increasing window size, target ack is:", target_ack, "window size is:",window_size)
             times[ack_num].append(end_time)
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
 
         #When we get an acknowledgement, we know all packets up to that number have been acknowledged
         #so we can make the base that acknowledgement
-        base = int(ack_num)
+        if(ack_num != 0):
+            base = int(ack_num) + 1
+        #printInfo(base, next_seq_num-1, ack_num)
         continue
     except socket.timeout:
         print("had a timeout")
+        window_size = 1
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
         break
 
