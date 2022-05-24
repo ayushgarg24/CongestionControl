@@ -21,6 +21,7 @@ window_size = 1
 ack_sequences = [0]
 #target ack number is top of the window
 target_ack = 0
+dup_count = 0
 first_run = True
 data_packets = ["first dummy entry"]
 x = 0
@@ -94,17 +95,23 @@ while(True):
         ack_num = int(ack_num)
         #print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back, if statement is true we got a dup and need to resize window
-            printInfo(base, ack_num + 1, ack_num)
-            print("Thats a dupe^")
-            #resize window:
-            window_size = 1
-            sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+            dup_count += 1
+            if(dup_count >= 3):
+                printInfo(base, ack_num + 1, ack_num)
+                print("Thats a dupe^")
+                #resize window:
+                window_size = 1
+                sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+                dup_count = 0
+            continue
         elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
             print("got a dummy")
             ack_num = prev_ack
+            dup_count = 0
             continue
         else: #We know its not a duplicate ack, so save the end time and increase window size here
             #print("ack num:",ack_num)
+            dup_count = 0
             end_time = time.time()
             printInfo(base, next_seq_num-1, ack_num)
             print("Thats a normal ack^")
@@ -137,6 +144,7 @@ while(True):
         print("had a timeout")
         window_size = 1
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
+        dup_count = 0
         break
 
 #get the leftover acks
