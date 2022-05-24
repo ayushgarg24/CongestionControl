@@ -145,7 +145,7 @@ while(True):
         window_size = 1
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
         dup_count = 0
-        break
+        continue
 
 #get the leftover acks
 while(ack_num < next_seq_num - 1):
@@ -198,7 +198,7 @@ while(ack_num < next_seq_num - 1):
         print("had a timeout")
         window_size = 1
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
-        break
+        continue
 
 #Add end times to the ones that dont have end times
 for x in reversed(times):
