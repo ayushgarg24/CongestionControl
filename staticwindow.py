@@ -86,16 +86,21 @@ while(True):
         #receiver acknowledgement
     try:
         prev_ack = ack_num 
-        ack_num,addr = sender_socket.recvfrom(4)  
+        ack_num,addr = sender_socket.recvfrom(1024)  
         ack_num = int(ack_num)
-        #print("ack num:",ack_num)
+        print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back
-            printInfo(base, ack_num + 1, ack_num)
-            print("Thats a dupe^")
-            sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+            dup_count += 1
+            if(dup_count >= 3):
+                printInfo(base, ack_num + 1, ack_num)
+                print("Thats a dupe^")
+                sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+                dup_count = 0
+            continue
         elif prev_ack > ack_num:
             print("got a dummy")
             ack_num = prev_ack
+            #dup_count = 0
             continue
         else: #We know its not a duplicate ack, so save the end time
             #print("ack num:",ack_num)
@@ -103,6 +108,7 @@ while(True):
             printInfo(base, next_seq_num-1, ack_num)
             print("Thats a normal ack^")
             times[ack_num].append(end_time)
+            dup_count = 0
         #print("ack size:", len(ack_num))
         #print("got ack for packet:", ack_num.decode())
 
