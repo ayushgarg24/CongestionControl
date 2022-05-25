@@ -50,7 +50,7 @@ times.append(start)
 
 # Instatiating a UDP Socket
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-socket.settimeout(timeout_interval)
+sender_socket.settimeout(timeout_interval)
 
 def printInfo(base, seqSent, ackNum):
     currentWin = [base]
