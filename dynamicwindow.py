@@ -37,14 +37,20 @@ delay_sum = 0
 throughput_sum = 0
 delays = [0]
 throughputs = [0]
+estimatedRTT = 0
+deviationRTT = 0
+timeout_interval = 5
+
+
 #initialize lists for tracking the timing
 times = []
 start = [0,0]
 times.append(start)
-socket.setdefaulttimeout(5)
+
 
 # Instatiating a UDP Socket
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sender_socket.setdefaulttimeout(timeout_interval)
 
 def printInfo(base, seqSent, ackNum):
     currentWin = [base]
@@ -113,6 +119,17 @@ while(True):
             #print("ack num:",ack_num)
             dup_count = 0
             end_time = time.time()
+            # sample RTT
+            sampleRTT = times[ack_num][0] - end_time
+            # first RTT
+            if (ack_num == 1):
+                estimatedRTT = sampleRTT
+            else:
+                estimatedRTT = 0.875 * estimatedRTT + 0.125 * sampleRTT
+                deviationRTT = 0.75 * deviationRTT + 0.25 * math.abs(sampleRTT -  estimatedRTT)
+            timeout_interval = estimatedRTT + 4 * deviationRTT
+            sender_socket.settimeout(timeout_interval)
+            
             printInfo(base, next_seq_num-1, ack_num)
             print("Thats a normal ack^")
             #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
