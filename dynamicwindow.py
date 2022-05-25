@@ -39,7 +39,7 @@ delays = [0]
 throughputs = [0]
 estimatedRTT = 0
 deviationRTT = 0
-timeout_interval = 5
+timeout_interval = 5.0
 
 
 #initialize lists for tracking the timing
@@ -120,14 +120,18 @@ while(True):
             dup_count = 0
             end_time = time.time()
             # sample RTT
-            sampleRTT = times[ack_num][0] - end_time
+            # print("ackNum", ackNum)
+            sampleRTT = end_time - times[ack_num][0] 
             # first RTT
             if (ack_num == 1):
                 estimatedRTT = sampleRTT
             else:
                 estimatedRTT = 0.875 * estimatedRTT + 0.125 * sampleRTT
-                deviationRTT = 0.75 * deviationRTT + 0.25 * math.abs(sampleRTT -  estimatedRTT)
-            timeout_interval = estimatedRTT + 4 * deviationRTT
+                deviationRTT = 0.75 * deviationRTT + 0.25 * abs(sampleRTT -  estimatedRTT)
+            # print("estimatedRTT", estimatedRTT)
+            # print("deviationRTT", deviationRTT)
+            timeout_interval = estimatedRTT + (4 * deviationRTT)
+            # print("timeout_interval", timeout_interval)
             sender_socket.settimeout(timeout_interval)
             
             printInfo(base, next_seq_num-1, ack_num)
