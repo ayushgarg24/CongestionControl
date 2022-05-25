@@ -113,7 +113,7 @@ while(True):
         elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
             print("got a dummy")
             ack_num = prev_ack
-            dup_count = 0
+            # dup_count = 0
             continue
         else: #We know its not a duplicate ack, so save the end time and increase window size here
             #print("ack num:",ack_num)
@@ -176,18 +176,38 @@ while(ack_num < next_seq_num - 1):
         ack_num = int(ack_num)
         #print("ack num:",ack_num)
         if(ack_num == prev_ack): #Check for same ack number back to back, if statement is true we got a dup and need to resize window
-            printInfo(base, ack_num + 1, ack_num)
-            print("Thats a dupe^")
-            #resize window:
-            window_size = 1
-            sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+            dup_count += 1
+            if(dup_count >= 3):
+                printInfo(base, ack_num + 1, ack_num)
+                print("Thats a dupe^")
+                #resize window:
+                window_size = 1
+                sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+                dup_count = 0
+            continue
         elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
             print("got a dummy")
             ack_num = prev_ack
             continue
         else: #We know its not a duplicate ack, so save the end time and increase window size here
             #print("ack num:",ack_num)
+            dup_count = 0
             end_time = time.time()
+            # sample RTT
+            # print("ackNum", ackNum)
+            sampleRTT = end_time - times[ack_num][0] 
+            # first RTT
+            if (ack_num == 1):
+                estimatedRTT = sampleRTT
+            else:
+                estimatedRTT = 0.875 * estimatedRTT + 0.125 * sampleRTT
+                deviationRTT = 0.75 * deviationRTT + 0.25 * abs(sampleRTT -  estimatedRTT)
+            # print("estimatedRTT", estimatedRTT)
+            # print("deviationRTT", deviationRTT)
+            timeout_interval = estimatedRTT + (4 * deviationRTT)
+            # print("timeout_interval", timeout_interval)
+            sender_socket.settimeout(timeout_interval)
+            
             printInfo(base, next_seq_num-1, ack_num)
             print("Thats a normal ack^")
             #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
