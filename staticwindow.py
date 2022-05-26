@@ -121,7 +121,7 @@ while(True):
     except socket.timeout:
         print("had a timeout")
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
-        break
+        continue
 
 #get the leftover acks
 while(ack_num < next_seq_num - 1):
