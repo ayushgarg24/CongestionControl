@@ -40,6 +40,7 @@ throughputs = [0]
 estimatedRTT = 0
 deviationRTT = 0
 timeout_interval = 5.0
+go = True
 
 
 #initialize lists for tracking the timing
@@ -71,7 +72,7 @@ def printInfo(base, seqSent, ackNum):
 f = open(file_name, "rb") #open file
 
 x = 0
-while(True):
+while(True and go):
     #x += 1
     #send packet to receiver
     #check if next packet to be sent is in the window
@@ -96,74 +97,77 @@ while(True):
         continue
         #receiver acknowledgement
     try:
-        prev_ack = ack_num 
-        ack_num,addr = sender_socket.recvfrom(4)  
-        ack_num = int(ack_num)
-        #print("ack num:",ack_num)
-        if(ack_num == prev_ack): #Check for same ack number back to back, if statement is true we got a dup and need to resize window
-            dup_count += 1
-            if(dup_count >= 3):
-                printInfo(base, ack_num + 1, ack_num)
-                print("Thats a dupe^")
-                #resize window:
-                window_size = round(window_size / 2)
-                sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+        for y in range(0,window_size):
+            if(y == 3): go = False
+            prev_ack = ack_num 
+            ack_num,addr = sender_socket.recvfrom(4)  
+            ack_num = int(ack_num)
+            print("ack num:",ack_num)
+            if(ack_num == prev_ack): #Check for same ack number back to back, if statement is true we got a dup and need to resize window
+                dup_count += 1
+                if(dup_count >= 3):
+                    printInfo(base, ack_num + 1, ack_num)
+                    print("Thats a dupe^")
+                    #resize window:
+                    window_size = 5
+                    sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT)) #resend packet
+                    dup_count = 0
+                continue
+            elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
+                print("got a dummy")
+                ack_num = prev_ack
+                # dup_count = 0
+                continue
+            else: #We know its not a duplicate ack, so save the end time and increase window size here
+                #print("ack num:",ack_num)
                 dup_count = 0
-            continue
-        elif prev_ack > ack_num: #We got an old ack number so just ignore and continue
-            print("got a dummy")
-            ack_num = prev_ack
-            # dup_count = 0
-            continue
-        else: #We know its not a duplicate ack, so save the end time and increase window size here
-            #print("ack num:",ack_num)
-            dup_count = 0
-            end_time = time.time()
-            # sample RTT
-            # print("ackNum", ackNum)
-            sampleRTT = end_time - times[ack_num][0] 
-            # first RTT
-            if (ack_num == 1):
-                estimatedRTT = sampleRTT
-            else:
-                estimatedRTT = 0.875 * estimatedRTT + 0.125 * sampleRTT
-                deviationRTT = 0.75 * deviationRTT + 0.25 * abs(sampleRTT -  estimatedRTT)
-            # print("estimatedRTT", estimatedRTT)
-            # print("deviationRTT", deviationRTT)
-            timeout_interval = estimatedRTT + (4 * deviationRTT)
-            # print("timeout_interval", timeout_interval)
-            sender_socket.settimeout(timeout_interval)
-            
-            printInfo(base, next_seq_num-1, ack_num)
-            print("Thats a normal ack^")
-            #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
-            # slow start or congestion control with some kind of if else based on the current window size.
-            # slow start: window_size = window_size * 2, congestion control: window_size = window_size + 1
-            #Slow Start: Increase window Size by 1 for every ack we receive
-            if(window_size < SS_THRESH):
-                window_size += 1
-            else: 
-                if(first_run):
-                    first_run = False
-                    target_ack = base + window_size
-                    print("first run target ack:", target_ack)
-                if(ack_num == target_ack):
+                end_time = time.time()
+                # sample RTT
+                # print("ackNum", ackNum)
+                sampleRTT = end_time - times[ack_num][0] 
+                # first RTT
+                if (ack_num == 1):
+                    estimatedRTT = sampleRTT
+                else:
+                    estimatedRTT = 0.875 * estimatedRTT + 0.125 * sampleRTT
+                    deviationRTT = 0.75 * deviationRTT + 0.25 * abs(sampleRTT -  estimatedRTT)
+                # print("estimatedRTT", estimatedRTT)
+                # print("deviationRTT", deviationRTT)
+                timeout_interval = estimatedRTT + (4 * deviationRTT)
+                # print("timeout_interval", timeout_interval)
+                sender_socket.settimeout(timeout_interval)
+                
+                printInfo(base, next_seq_num-1, ack_num)
+                print("Thats a normal ack^")
+                #increase window size: window_size = window_size * 2 or something like that, this is where we would have to check whether its
+                # slow start or congestion control with some kind of if else based on the current window size.
+                # slow start: window_size = window_size * 2, congestion control: window_size = window_size + 1
+                #Slow Start: Increase window Size by 1 for every ack we receive
+                if(window_size < SS_THRESH):
                     window_size += 1
-                    target_ack = base + window_size
-                    print("We are increasing window size, target ack is:", target_ack, "window size is:",window_size)
-            times[ack_num].append(end_time)
-        #print("ack size:", len(ack_num))
-        #print("got ack for packet:", ack_num.decode())
+                else: 
+                    if(first_run):
+                        first_run = False
+                        target_ack = base + window_size
+                        print("first run target ack:", target_ack)
+                    if(ack_num == target_ack):
+                        window_size += 1
+                        target_ack = base + window_size
+                        print("We are increasing window size, target ack is:", target_ack, "window size is:",window_size)
+                times[ack_num].append(end_time)
+            #print("ack size:", len(ack_num))
+            #print("got ack for packet:", ack_num.decode())
 
-        #When we get an acknowledgement, we know all packets up to that number have been acknowledged
-        #so we can make the base that acknowledgement
-        if(ack_num != 0):
-            base = int(ack_num) + 1
-        #printInfo(base, next_seq_num-1, ack_num)
-        continue
+            #When we get an acknowledgement, we know all packets up to that number have been acknowledged
+            #so we can make the base that acknowledgement
+            if(ack_num != 0):
+                base = int(ack_num) + 1
+            #printInfo(base, next_seq_num-1, ack_num)
+            continue
     except socket.timeout: #Here we got a timeout, so set window size to 1, do we need to reset base here?
         print("had a timeout")
-        window_size = round(window_size / 4)
+        #window_size = round(window_size / 4)
+        window_size = 1
         sender_socket.sendto(data_packets[ack_num + 1].encode(), (IP_ADDRESS, PORT))
         dup_count = 0
         continue
