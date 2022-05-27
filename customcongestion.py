@@ -133,15 +133,6 @@ while(True):
             #Slow Start: Increase window Size by 1 for every ack we receive
             if(window_size < SS_THRESH):
                 window_size += 1
-            else: 
-                if(first_run):
-                    first_run = False
-                    target_ack = base + window_size
-                    print("first run target ack:", target_ack)
-                if(ack_num == target_ack):
-                    window_size += 1
-                    target_ack = base + window_size
-                    print("We are increasing window size, target ack is:", target_ack, "window size is:",window_size)
             times[ack_num].append(end_time)
             #print("ack size:", len(ack_num))
             #print("got ack for packet:", ack_num.decode())
